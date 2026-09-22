@@ -5,6 +5,7 @@ substitutions:
   
 esphome:
   name: growatt
+  friendly_name: shinewifi-x
 
 esp8266:
   board: esp07s
