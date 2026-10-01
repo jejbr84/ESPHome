@@ -21,6 +21,8 @@ logger:
 
 # Enable Home Assistant API
 api:
+  encryption:
+    key: !secret growatt__encryption_key
 
 ota:
   platform: esphome
@@ -34,6 +36,7 @@ wifi:
   ap:
     ssid: ${name} Fallback Hotspot
     password: !secret ota_passwd
+
 captive_portal:
 
 time:
@@ -56,8 +59,8 @@ output:
 
 uart:
   id: mod_bus
-  tx_pin: 1
-  rx_pin: 3
+  tx_pin: GPIO1
+  rx_pin: GPIO3
   baud_rate: 115200
   
 modbus:
@@ -65,44 +68,90 @@ modbus:
   uart_id: mod_bus
   
 modbus_controller:
-  - id: growatt
-# the Modbus device addr
+  - id: modbus_fast
     address: 0x1
     modbus_id: modbus1
     setup_priority: -10  
+    update_interval: 60s
 
+  - id: modbus_slow
+    address: 0x1
+    modbus_id: modbus1
+    setup_priority: -10  
+    update_interval: 300s
+
+number:
+  - platform: modbus_controller
+    modbus_controller_id: modbus_slow
+    id: remote_on_off
+    name: "Remote On⁄Off" # Inverter Off:0, Inverter On:1, BDC Off: 2, BDC On: 3
+    address: 0
+    register_type: holding
+    value_type: U_WORD
+    min_value: 0
+    max_value: 3
+    step: 1
+    icon: mdi:eye
+    entity_category: diagnostic
+
+  - platform: modbus_controller
+    modbus_controller_id: modbus_slow
+    id: max_output_power
+    name: "Max Output Power"
+    address: 3
+    register_type: holding
+    value_type: U_WORD
+    min_value: 0
+    max_value: 100
+    step: 1
+    unit_of_measurement:  "%"
+    entity_category: config    
 
 sensor:
   - platform: modbus_controller
-    name: "${friendly_name} DcPower"
-    address: 5
+    modbus_controller_id: modbus_slow
+    name: "Status code"
+    address: 0
+    register_type: "read"
+    internal: true
+    accuracy_decimals: 0
+
+  - platform: modbus_controller
+    modbus_controller_id: modbus_fast
+    name: "Input power"
+    address: 1
     register_type: "read"
     unit_of_measurement: W
     device_class: power
-    icon: mdi:flash
-    value_type: U_DWORD
-    accuracy_decimals: 1
+    state_class: measurement
+    icon: mdi:solar-power-variant
+    value_type: U_WORD
+    accuracy_decimals: 0
     filters:
-    - multiply: 0.1
-        
+      - multiply: 0.1      
+  
   - platform: modbus_controller
-    name: "${friendly_name} DcVoltage"
+    modbus_controller_id: modbus_fast
+    name: "PV1 voltage"
     address: 3
     register_type: "read"
     unit_of_measurement: V
     device_class: voltage
+    state_class: measurement
     icon: mdi:flash
     value_type: U_WORD
-    accuracy_decimals: 1
+    accuracy_decimals: 0
     filters:
     - multiply: 0.1
     
   - platform: modbus_controller
-    name: "${friendly_name} DcInputCurrent"
+    modbus_controller_id: modbus_fast
+    name: "PV1 current"
     address: 4
     register_type: "read"
     unit_of_measurement: A
     device_class: current
+    state_class: measurement
     icon: mdi:flash
     value_type: U_WORD
     accuracy_decimals: 1
@@ -110,6 +159,72 @@ sensor:
     - multiply: 0.1
     
   - platform: modbus_controller
+    modbus_controller_id: modbus_fast
+    name: "PV1 power"
+    address: 5
+    register_type: "read"
+    unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    icon: mdi:flash
+    value_type: U_DWORD
+    accuracy_decimals: 0
+    filters:
+    - multiply: 0.1
+        
+  - platform: modbus_controller
+    modbus_controller_id: modbus_fast
+    name: "PV2 voltage"
+    address: 7
+    register_type: "read"
+    unit_of_measurement: V
+    device_class: voltage
+    state_class: measurement
+    icon: mdi:flash
+    value_type: U_WORD
+    accuracy_decimals: 0
+    filters:
+    - multiply: 0.1
+    
+  - platform: modbus_controller
+    modbus_controller_id: modbus_fast
+    name: "PV2 current"
+    address: 8
+    register_type: "read"
+    unit_of_measurement: A
+    device_class: current
+    state_class: measurement
+    icon: mdi:flash
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+    - multiply: 0.1
+    
+  - platform: modbus_controller
+    modbus_controller_id: modbus_fast
+    name: "PV2 power"
+    address: 9
+    register_type: "read"
+    unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    icon: mdi:flash
+    value_type: U_DWORD
+    accuracy_decimals: 0
+    filters:
+    - multiply: 0.1
+        
+
+
+
+
+
+
+
+
+
+      
+- platform: modbus_controller
     name: "${friendly_name} AcFrequency"
     address: 37
     register_type: "read"
