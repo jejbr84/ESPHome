@@ -5,7 +5,12 @@ substitutions:
   
 esphome:
   name: growatt
-  friendly_name: shinewifi-x
+  friendly_name: ${friendly_name}
+  on_boot:
+    priority: 600
+    then:
+      - lambda: |-        
+          delay(60000);
 
 esp8266:
   board: esp07s
@@ -13,6 +18,7 @@ esp8266:
 # Enable logging
 logger:
   baud_rate: 0
+
 # Enable Home Assistant API
 api:
 
@@ -21,14 +27,13 @@ ota:
   password: !secret ota_passwd
 
 wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
+  ssid: !secret wifi_ssid2
+  password: !secret wifi_password2
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
-    ssid: "${name} Fallback Hotspot"
-    password: "Yourpassword"
-
+    ssid: ${name} Fallback Hotspot
+    password: !secret ota_passwd
 captive_portal:
 
 time:
