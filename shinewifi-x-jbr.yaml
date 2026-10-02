@@ -1,11 +1,6 @@
-substitutions:
-  device_description: Growatt Inverter
-  friendly_name:  Growatt Inverter
-  name: Growatt
-  
 esphome:
   name: growatt
-  friendly_name: ${friendly_name}
+  friendly_name: Growatt Inverter
   on_boot:
     priority: 600
     then:
@@ -34,7 +29,7 @@ wifi:
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
-    ssid: ${name} Fallback Hotspot
+    ssid: Growatt Fallback Hotspot
     password: !secret ota_passwd
 
 captive_portal:
