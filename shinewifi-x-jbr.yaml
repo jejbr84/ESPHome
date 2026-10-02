@@ -133,7 +133,7 @@ sensor:
     device_class: power
     state_class: measurement
     icon: mdi:solar-power-variant
-    value_type: U_WORD
+    value_type: U_DWORD
     accuracy_decimals: 0
     filters:
       - multiply: 0.1      
