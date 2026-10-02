@@ -104,7 +104,19 @@ number:
     min_value: 0
     max_value: 100
     step: 1
-    unit_of_measurement:  "%"
+    unit_of_measurement: "%"
+    entity_category: config    
+
+  - platform: modbus_controller
+    modbus_controller_id: modbus_slow
+    name: "Start time"
+    address: 18
+    register_type: holding
+    value_type: U_WORD
+    min_value: 0
+    max_value: 1800
+    step: 1
+    unit_of_measurement: s
     entity_category: config    
 
 sensor:
@@ -115,6 +127,7 @@ sensor:
     register_type: "read"
     internal: true
     accuracy_decimals: 0
+    id: status
 
   - platform: modbus_controller
     modbus_controller_id: modbus_fast
@@ -214,97 +227,157 @@ sensor:
     filters:
     - multiply: 0.1
         
-
-
-
-
-
-
-
-
-
-      
-- platform: modbus_controller
-    name: "${friendly_name} AcFrequency"
-    address: 37
-    register_type: "read"
-    unit_of_measurement: Hz
-    icon: mdi:flash
-    value_type: U_WORD
-    accuracy_decimals: 1
-    filters:
-    - multiply: 0.01
-  
   - platform: modbus_controller
-    name: "${friendly_name} AcVoltage"
-    address: 38
-    register_type: "read"
-    unit_of_measurement: V
-    device_class: voltage
-    icon: mdi:flash
-    value_type: U_WORD
-    accuracy_decimals: 1
-    filters:
-    - multiply: 0.1
-  
-  - platform: modbus_controller
-    name: "${friendly_name} AcOutputCurrent"
-    address: 39
-    register_type: "read"
-    unit_of_measurement: A
-    device_class: current
-    icon: mdi:flash
-    value_type: U_WORD
-    accuracy_decimals: 1
-    filters:
-    - multiply: 0.1
-    
-  - platform: modbus_controller
-    name: "${friendly_name} AcPower"
-    address: 40
+    modbus_controller_id: modbus_fast
+    name: "Output power"
+    address: 35
     register_type: "read"
     unit_of_measurement: W
     device_class: power
-    icon: mdi:flash
+    state_class: measurement
+    icon: mdi:solar-power
     value_type: U_DWORD
-    accuracy_decimals: 1
+    accuracy_decimals: 0
     filters:
-    - multiply: 0.1
-    
+    - multiply: 0.1    
+
   - platform: modbus_controller
-    name: "${friendly_name} EnergyToday"
+    modbus_controller_id: modbus_slow
+    name: "Energy today"
     address: 53
     register_type: "read"
     unit_of_measurement: kWh
+    state_class: total_increasing
     device_class: energy
-    icon: mdi:flash
+    icon: mdi:solar-power
     value_type: U_DWORD
     accuracy_decimals: 1
     filters:
     - multiply: 0.1
     
   - platform: modbus_controller
-    name: "${friendly_name} EnergyTotal"
+    modbus_controller_id: modbus_slow
+    name: "Energy total"
     address: 55
     register_type: "read"
     unit_of_measurement: kWh
     state_class: total_increasing
     device_class: energy
-    icon: mdi:flash
+    icon: mdi:solar-power
     value_type: U_DWORD
     accuracy_decimals: 1
     filters:
     - multiply: 0.1
-
     
   - platform: modbus_controller
-    name: "${friendly_name} Temperature"
+    modbus_controller_id: modbus_slow
+    name: "Temperature"
     address: 93
     register_type: "read"
-    unit_of_measurement: C
+    unit_of_measurement: °C
+    state_class: measurement
     device_class: temperature
+    entity_category: diagnostic
     icon: mdi:thermometer
     value_type: U_WORD
     accuracy_decimals: 1
     filters:
     - multiply: 0.1
+
+text_sensor:
+  - platform: template
+    name: "Status state"
+    icon: mdi:eye
+    entity_category: diagnostic
+    lambda: |-
+      if ((id(status).state) == 1) {
+        return {"Normal"};
+      } else if ((id(status).state) == 0)  {
+        return {"Standby"};
+      } else if ((id(status).state) == 2)  {
+        return {"Discharge"};
+      } else if ((id(status).state) == 3)  {
+        return {"Fault"};
+      } else if ((id(status).state) == 4)  {
+        return {"Flash"};
+      } else if ((id(status).state) == 5)  {
+        return {"PV Charging"};
+      } else if ((id(status).state) == 6)  {
+        return {"AC Charging"};
+      } else if ((id(status).state) == 7)  {
+        return {"Combined Charging"};
+      } else if ((id(status).state) == 8)  {
+        return {"Combined Charging & Bypass"};
+      } else if ((id(status).state) == 9)  {
+        return {"PV Charging & Bypass"};
+      } else if ((id(status).state) == 10)  {
+        return {"AC Charging & Bypass"};
+      } else if ((id(status).state) == 11)  {
+        return {"Bypass"};
+      } else if (id(status).state == 12)  {
+        return {"PV Charge and Discharge"};
+      } else {
+        return {"Unknown"};
+      }
+
+  - platform: modbus_controller
+    modbus_controller_id: modbus_slow
+    name: "Fault code"
+    address: 105
+    register_type: "read"
+    icon: mdi:eye
+    entity_category: diagnostic
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint16_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0:  return std::string("No error");
+        case 24: return std::string("Auto test failed");
+        case 25: return std::string("No AC connection");
+        case 26: return std::string("PV isolation low");
+        case 27: return std::string("Residual I high");
+        case 28: return std::string("Output high DCI");
+        case 29: return std::string("PV voltage high");
+        case 30: return std::string("AC voltage out of range");
+        case 31: return std::string("AC frequency out of range");
+        case 32: return std::string("Module too hot");
+        // case 1~23 " Error: 99+x
+        default: return std::string("Fault code: " + to_string(value));
+      }
+      return x;
+
+  - platform: modbus_controller
+    modbus_controller_id: modbus_slow
+    name: "Serial Number"
+    address: 23
+    register_type: holding
+    register_count: 5
+    response_size: 10
+    entity_category: diagnostic
+    icon: mdi:barcode
+    raw_encode: HEXBYTES
+    lambda: |-
+      std::string result;
+      for (size_t i = 0; i + 1 < x.length(); i += 2) {
+        char chr = (char) strtol(x.substr(i, 2).c_str(), nullptr, 16);
+        if (chr != 0) result += chr;
+      }
+      return result;
+
+  - platform: modbus_controller
+    modbus_controller_id: modbus_slow
+    name: "Firmware Version"
+    address: 9
+    register_type: holding
+    register_count: 3
+    response_size: 6
+    entity_category: diagnostic
+    icon: mdi:chip
+    raw_encode: HEXBYTES
+    lambda: |-
+      std::string result;
+      for (size_t i = 0; i + 1 < x.length(); i += 2) {
+        char chr = (char) strtol(x.substr(i, 2).c_str(), nullptr, 16);
+        if (chr != 0) result += chr;
+      }
+      return result;
